@@ -1,103 +1,105 @@
 import React, { useState } from 'react';
-import { View, Text, Switch, TouchableOpacity, StyleSheet, ScrollView, Linking } from 'react-native';
+import { View, Text, Switch, TouchableOpacity, ScrollView, StyleSheet, Linking, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as Notifications from 'expo-notifications';
+
+const COLORS = { primary: '#1E6FD9', bg: '#F2F4F8', card: '#fff', text: '#1C1C1E', sub: '#8E8E93' };
 
 export default function SettingsScreen() {
   const [dailyBriefing, setDailyBriefing] = useState(false);
   const [taskReminders, setTaskReminders] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
 
-  const toggleDailyBriefing = async (val) => {
-    setDailyBriefing(val);
-    if (val) {
-      await Notifications.scheduleNotificationAsync({
-        content: { title: '🧠 Good Morning, Bob!', body: 'Your AI Business Assistant is ready. Let\'s conquer today!', sound: true },
-        trigger: { hour: 8, minute: 0, repeats: true },
-      });
-    } else {
-      await Notifications.cancelAllScheduledNotificationsAsync();
+  const openSettings = () => Linking.openSettings();
+
+  const sections = [
+    {
+      title: 'Profile',
+      items: [
+        { icon: 'person-circle', color: '#1E6FD9', label: 'Name', value: 'Bob Chand' },
+        { icon: 'globe', color: '#34C759', label: 'Website', value: 'AIBusinessAssistant.ai' },
+      ]
+    },
+    {
+      title: 'Notifications',
+      items: [
+        { icon: 'sunrise', color: '#F5A623', label: 'Daily Morning Briefing', toggle: true, state: dailyBriefing, set: setDailyBriefing },
+        { icon: 'alarm', color: '#FF3B30', label: 'Task Reminders', toggle: true, state: taskReminders, set: setTaskReminders },
+        { icon: 'settings', color: '#8E8E93', label: 'Notification Settings', action: openSettings },
+      ]
+    },
+    {
+      title: 'AI Configuration',
+      items: [
+        { icon: 'hardware-chip', color: '#AF52DE', label: 'AI Model', value: 'GPT-4o' },
+        { icon: 'server', color: '#1E6FD9', label: 'Backend', value: 'Base44 Cloud' },
+        { icon: 'shield-checkmark', color: '#34C759', label: 'Data Privacy', value: 'Encrypted' },
+      ]
+    },
+    {
+      title: 'About',
+      items: [
+        { icon: 'information-circle', color: '#1E6FD9', label: 'Version', value: '1.0.0' },
+        { icon: 'star', color: '#F5A623', label: 'Rate the App', action: () => Alert.alert('Thank you!', 'Rating coming soon on the App Store.') },
+        { icon: 'mail', color: '#34C759', label: 'Contact Support', action: () => Linking.openURL('mailto:support@aibusinessassistant.ai') },
+      ]
     }
-  };
-
-  const rows = [
-    { icon: 'person-circle', label: 'Name', value: 'Bob Chand', color: '#4A90E2' },
-    { icon: 'globe', label: 'Website', value: 'AIBusinessAssistant.ai', color: '#4A90E2' },
-    { icon: 'brain', label: 'AI Model', value: 'GPT-4o', color: '#9B59B6' },
-    { icon: 'lock-closed', label: 'Privacy', value: 'Encrypted', color: '#7ED321' },
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-
-        {/* Profile Card */}
-        <View style={styles.profileCard}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.bg }}>
+      <ScrollView contentContainerStyle={{ padding: 20 }}>
+        {/* Avatar */}
+        <View style={styles.profileHeader}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>BC</Text>
           </View>
-          <View>
-            <Text style={styles.name}>Bob Chand</Text>
-            <Text style={styles.site}>AIBusinessAssistant.ai</Text>
-          </View>
+          <Text style={styles.profileName}>Bob Chand</Text>
+          <Text style={styles.profileSub}>AIBusinessAssistant.ai</Text>
         </View>
 
-        {/* Info rows */}
-        <View style={styles.section}>
-          {rows.map(row => (
-            <View key={row.label} style={styles.row}>
-              <Ionicons name={row.icon} size={20} color={row.color} />
-              <Text style={styles.rowLabel}>{row.label}</Text>
-              <Text style={styles.rowValue}>{row.value}</Text>
+        {sections.map((section, si) => (
+          <View key={si} style={styles.section}>
+            <Text style={styles.sectionTitle}>{section.title}</Text>
+            <View style={styles.card}>
+              {section.items.map((item, ii) => (
+                <TouchableOpacity
+                  key={ii}
+                  style={[styles.row, ii < section.items.length - 1 && styles.rowBorder]}
+                  onPress={item.action}
+                  disabled={!item.action && !item.toggle}
+                >
+                  <View style={[styles.iconBox, { backgroundColor: item.color + '18' }]}>
+                    <Ionicons name={item.icon} size={18} color={item.color} />
+                  </View>
+                  <Text style={styles.rowLabel}>{item.label}</Text>
+                  {item.toggle ? (
+                    <Switch value={item.state} onValueChange={item.set} trackColor={{ true: COLORS.primary }} />
+                  ) : (
+                    <Text style={styles.rowValue}>{item.value || (item.action ? '›' : '')}</Text>
+                  )}
+                </TouchableOpacity>
+              ))}
             </View>
-          ))}
-        </View>
-
-        {/* Notifications */}
-        <Text style={styles.sectionTitle}>Notifications</Text>
-        <View style={styles.section}>
-          <View style={styles.row}>
-            <Ionicons name="sunrise" size={20} color="#F5A623" />
-            <Text style={styles.rowLabel}>Daily Morning Briefing</Text>
-            <Switch value={dailyBriefing} onValueChange={toggleDailyBriefing} trackColor={{ true: '#4A90E2' }} />
           </View>
-          <View style={styles.row}>
-            <Ionicons name="alarm" size={20} color="#FF3B30" />
-            <Text style={styles.rowLabel}>Task Reminders</Text>
-            <Switch value={taskReminders} onValueChange={setTaskReminders} trackColor={{ true: '#4A90E2' }} />
-          </View>
-        </View>
-
-        {/* About */}
-        <Text style={styles.sectionTitle}>About</Text>
-        <View style={styles.section}>
-          <View style={styles.row}>
-            <Ionicons name="information-circle" size={20} color="#4A90E2" />
-            <Text style={styles.rowLabel}>Version</Text>
-            <Text style={styles.rowValue}>1.0.0</Text>
-          </View>
-          <TouchableOpacity style={styles.row} onPress={() => Linking.openURL('https://aibusinessassistant.ai')}>
-            <Ionicons name="globe" size={20} color="#4A90E2" />
-            <Text style={styles.rowLabel}>Visit Website</Text>
-            <Ionicons name="chevron-forward" size={16} color="#8E8E93" />
-          </TouchableOpacity>
-        </View>
+        ))}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0A1628' },
-  scroll: { padding: 20 },
-  profileCard: { flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: '#1C2E4A', borderRadius: 16, padding: 20, marginBottom: 20 },
-  avatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#4A90E2', alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
-  name: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
-  site: { color: '#8E8E93', fontSize: 13, marginTop: 2 },
-  sectionTitle: { color: '#8E8E93', fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10, marginTop: 8 },
-  section: { backgroundColor: '#1C2E4A', borderRadius: 16, overflow: 'hidden', marginBottom: 20 },
-  row: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12, borderBottomWidth: 1, borderBottomColor: '#0A1628' },
-  rowLabel: { flex: 1, color: '#fff', fontSize: 15 },
-  rowValue: { color: '#8E8E93', fontSize: 14 },
+  profileHeader: { alignItems: 'center', marginBottom: 28 },
+  avatar: { width: 72, height: 72, borderRadius: 36, backgroundColor: '#1E6FD9', justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
+  avatarText: { fontSize: 26, fontWeight: 'bold', color: '#fff' },
+  profileName: { fontSize: 20, fontWeight: 'bold', color: '#1C1C1E' },
+  profileSub: { fontSize: 13, color: '#8E8E93', marginTop: 2 },
+  section: { marginBottom: 20 },
+  sectionTitle: { fontSize: 13, fontWeight: '600', color: '#8E8E93', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
+  card: { backgroundColor: '#fff', borderRadius: 16, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },
+  row: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
+  rowBorder: { borderBottomWidth: 1, borderBottomColor: '#F2F4F8' },
+  iconBox: { width: 34, height: 34, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  rowLabel: { flex: 1, fontSize: 15, color: '#1C1C1E' },
+  rowValue: { fontSize: 14, color: '#8E8E93' },
 });
