@@ -1,0 +1,46 @@
+{
+  "expo": {
+    "name": "AI Business Assistant",
+    "slug": "aibusinessassistant",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0A1628"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "ai.aibusinessassistant.app",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "AIBusinessAssistant uses your microphone for voice input.",
+        "NSSpeechRecognitionUsageDescription": "AIBusinessAssistant uses speech recognition to convert voice to text."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0A1628"
+      },
+      "package": "ai.aibusinessassistant.app",
+      "permissions": ["RECORD_AUDIO", "RECEIVE_BOOT_COMPLETED", "VIBRATE"]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      ["expo-notifications", {
+        "icon": "./assets/notification-icon.png",
+        "color": "#0A1628"
+      }]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "aibusinessassistant"
+      }
+    }
+  }
+}
