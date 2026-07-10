@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "AI Business Assistant",
+    "name": "AI Invoice Generator",
     "slug": "aibusinessassistant",
     "version": "1.0.0",
     "sdkVersion": "52.0.0",
@@ -17,8 +17,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "ai.aibusinessassistant.app",
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "AIBusinessAssistant uses your microphone for voice input.",
-        "NSSpeechRecognitionUsageDescription": "AIBusinessAssistant uses speech recognition to convert your voice to text."
+        "NSMicrophoneUsageDescription": "AI Invoice Generator uses your microphone for voice input to create invoices hands-free.",
+        "NSSpeechRecognitionUsageDescription": "AI Invoice Generator uses speech recognition to convert your voice to invoice details.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -39,10 +40,11 @@
           "icon": "./assets/notification-icon.png",
           "color": "#0A1628"
         }
-      ]
+      ],
+      "react-native-purchases"
     ],
     "extra": {
-      "apiEndpoint": "https://superagent-02ccfade.base44.app/functions/aiChat",
+      "apiEndpoint": "https://superagent-02ccfade.base44.app/functions/aiInvoice",
       "eas": {
         "projectId": "aibusinessassistant"
       }

@@ -1,12 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
-  ActivityIndicator, Linking, Alert
+  ActivityIndicator, Alert, Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-const CHECKOUT_URL = 'https://superagent-02ccfade.base44.app/functions/stripeCheckout';
+import {
+  getOfferings,
+  purchasePackage,
+  restorePurchases,
+  ENTITLEMENT_PRO,
+} from '../services/RevenueCatService';
 
 const FEATURES = [
   { icon: 'chatbubble-ellipses', text: 'Unlimited GPT-4o AI Chat' },
@@ -18,46 +22,101 @@ const FEATURES = [
 ];
 
 export default function PaywallScreen({ navigation }) {
-  const [selected, setSelected] = useState('monthly');
-  const [loading, setLoading] = useState(false);
+  const [offering, setOffering] = useState(null);
+  const [selectedPkg, setSelectedPkg] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [purchasing, setPurchasing] = useState(false);
+  const [restoring, setRestoring] = useState(false);
 
-  const plans = [
-    {
-      id: 'monthly',
-      label: 'Monthly',
-      price: 'CA$9.99',
-      period: '/month',
-      badge: null,
-    },
-    {
-      id: 'yearly',
-      label: 'Yearly',
-      price: 'CA$79.99',
-      period: '/year',
-      badge: 'Save 33%',
-    },
-  ];
+  useEffect(() => {
+    loadOfferings();
+  }, []);
 
-  const handleSubscribe = async () => {
+  const loadOfferings = async () => {
     setLoading(true);
     try {
-      const res = await fetch(CHECKOUT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: selected }),
-      });
-      const data = await res.json();
-      if (data.url) {
-        await Linking.openURL(data.url);
-      } else {
-        Alert.alert('Error', 'Could not start checkout. Please try again.');
+      const current = await getOfferings();
+      if (current) {
+        setOffering(current);
+        // Default select monthly package
+        const monthly = current.availablePackages.find(
+          p => p.packageType === 'MONTHLY'
+        ) || current.availablePackages[0];
+        setSelectedPkg(monthly);
       }
     } catch (e) {
-      Alert.alert('Error', 'Network error. Please try again.');
+      Alert.alert('Error', 'Could not load subscription options. Please check your connection.');
     } finally {
       setLoading(false);
     }
   };
+
+  const handlePurchase = async () => {
+    if (!selectedPkg) return;
+    setPurchasing(true);
+    try {
+      const result = await purchasePackage(selectedPkg);
+      if (result.success && result.isActive) {
+        Alert.alert(
+          'Welcome to Pro!',
+          'Your subscription is now active. Enjoy all features!',
+          [{ text: 'Get Started', onPress: () => navigation.replace('Dashboard') }]
+        );
+      }
+    } catch (e) {
+      Alert.alert('Purchase Failed', e.message || 'Something went wrong. Please try again.');
+    } finally {
+      setPurchasing(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    setRestoring(true);
+    try {
+      const result = await restorePurchases();
+      if (result.isActive) {
+        Alert.alert(
+          'Subscription Restored',
+          'Your Pro subscription has been restored.',
+          [{ text: 'Continue', onPress: () => navigation.replace('Dashboard') }]
+        );
+      } else {
+        Alert.alert('No Active Subscription', 'We could not find an active subscription for this account.');
+      }
+    } catch (e) {
+      Alert.alert('Restore Failed', e.message || 'Could not restore purchases.');
+    } finally {
+      setRestoring(false);
+    }
+  };
+
+  const formatPrice = (pkg) => {
+    return pkg?.product?.priceString || '';
+  };
+
+  const getPeriod = (pkg) => {
+    if (!pkg) return '';
+    switch (pkg.packageType) {
+      case 'MONTHLY': return '/month';
+      case 'ANNUAL': return '/year';
+      default: return '';
+    }
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#1E6FD9" />
+          <Text style={styles.loadingText}>Loading plans...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const packages = offering?.availablePackages || [];
+  const monthlyPkg = packages.find(p => p.packageType === 'MONTHLY');
+  const annualPkg = packages.find(p => p.packageType === 'ANNUAL');
 
   return (
     <SafeAreaView style={styles.container}>
@@ -70,7 +129,7 @@ export default function PaywallScreen({ navigation }) {
           </View>
           <Text style={styles.title}>AI Business Assistant</Text>
           <Text style={styles.subtitle}>Pro</Text>
-          <Text style={styles.trial}>🎉 Start your 7-day FREE trial</Text>
+          <Text style={styles.trial}>Start your 7-day FREE trial</Text>
         </View>
 
         {/* Features */}
@@ -88,38 +147,73 @@ export default function PaywallScreen({ navigation }) {
 
         {/* Plan selector */}
         <View style={styles.plansRow}>
-          {plans.map(plan => (
+          {monthlyPkg && (
             <TouchableOpacity
-              key={plan.id}
-              style={[styles.planCard, selected === plan.id && styles.planCardSelected]}
-              onPress={() => setSelected(plan.id)}
+              style={[styles.planCard, selectedPkg?.identifier === monthlyPkg.identifier && styles.planCardSelected]}
+              onPress={() => setSelectedPkg(monthlyPkg)}
             >
-              {plan.badge && (
-                <View style={styles.planBadge}>
-                  <Text style={styles.planBadgeText}>{plan.badge}</Text>
-                </View>
-              )}
-              <Text style={[styles.planLabel, selected === plan.id && styles.planLabelSelected]}>{plan.label}</Text>
-              <Text style={[styles.planPrice, selected === plan.id && styles.planPriceSelected]}>{plan.price}</Text>
-              <Text style={[styles.planPeriod, selected === plan.id && styles.planPeriodSelected]}>{plan.period}</Text>
+              <Text style={[styles.planLabel, selectedPkg?.identifier === monthlyPkg.identifier && styles.planLabelSelected]}>
+                Monthly
+              </Text>
+              <Text style={[styles.planPrice, selectedPkg?.identifier === monthlyPkg.identifier && styles.planPriceSelected]}>
+                {formatPrice(monthlyPkg)}
+              </Text>
+              <Text style={[styles.planPeriod, selectedPkg?.identifier === monthlyPkg.identifier && styles.planPeriodSelected]}>
+                /month
+              </Text>
             </TouchableOpacity>
-          ))}
+          )}
+          {annualPkg && (
+            <TouchableOpacity
+              style={[styles.planCard, selectedPkg?.identifier === annualPkg.identifier && styles.planCardSelected]}
+              onPress={() => setSelectedPkg(annualPkg)}
+            >
+              <View style={styles.planBadge}>
+                <Text style={styles.planBadgeText}>Save 33%</Text>
+              </View>
+              <Text style={[styles.planLabel, selectedPkg?.identifier === annualPkg.identifier && styles.planLabelSelected]}>
+                Yearly
+              </Text>
+              <Text style={[styles.planPrice, selectedPkg?.identifier === annualPkg.identifier && styles.planPriceSelected]}>
+                {formatPrice(annualPkg)}
+              </Text>
+              <Text style={[styles.planPeriod, selectedPkg?.identifier === annualPkg.identifier && styles.planPeriodSelected]}>
+                /year
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
-        {/* CTA Button */}
-        <TouchableOpacity style={styles.ctaButton} onPress={handleSubscribe} disabled={loading}>
-          {loading ? (
+        {/* CTA */}
+        <TouchableOpacity
+          style={styles.ctaButton}
+          onPress={handlePurchase}
+          disabled={purchasing || !selectedPkg}
+        >
+          {purchasing ? (
             <ActivityIndicator color="#fff" />
           ) : (
             <>
               <Text style={styles.ctaText}>Start Free Trial</Text>
-              <Text style={styles.ctaSub}>Then {selected === 'monthly' ? 'CA$9.99/month' : 'CA$79.99/year'} · Cancel anytime</Text>
+              <Text style={styles.ctaSub}>
+                Then {formatPrice(selectedPkg)}{getPeriod(selectedPkg)} · Cancel anytime
+              </Text>
             </>
           )}
         </TouchableOpacity>
 
+        {/* Restore */}
+        <TouchableOpacity style={styles.restoreButton} onPress={handleRestore} disabled={restoring}>
+          {restoring
+            ? <ActivityIndicator size="small" color="#8E8E93" />
+            : <Text style={styles.restoreText}>Restore Purchases</Text>
+          }
+        </TouchableOpacity>
+
         {/* Footer */}
-        <Text style={styles.footer}>No charge for 7 days · Secure payment by Stripe · Cancel anytime</Text>
+        <Text style={styles.footer}>
+          Payment will be charged to your Apple ID account. Subscription automatically renews unless cancelled at least 24 hours before the end of the current period. Cancel anytime in your App Store settings.
+        </Text>
 
       </ScrollView>
     </SafeAreaView>
@@ -128,6 +222,8 @@ export default function PaywallScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F2F4F8' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 16 },
+  loadingText: { color: '#8E8E93', fontSize: 15 },
   scroll: { padding: 24, paddingBottom: 40 },
   header: { alignItems: 'center', marginBottom: 24 },
   iconBadge: { width: 72, height: 72, borderRadius: 20, backgroundColor: '#1E6FD9', justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
@@ -149,8 +245,10 @@ const styles = StyleSheet.create({
   planPriceSelected: { color: '#1E6FD9' },
   planPeriod: { fontSize: 12, color: '#8E8E93' },
   planPeriodSelected: { color: '#1E6FD9' },
-  ctaButton: { backgroundColor: '#1E6FD9', borderRadius: 16, padding: 18, alignItems: 'center', marginBottom: 16, shadowColor: '#1E6FD9', shadowOpacity: 0.3, shadowRadius: 10, elevation: 4 },
+  ctaButton: { backgroundColor: '#1E6FD9', borderRadius: 16, padding: 18, alignItems: 'center', marginBottom: 12, shadowColor: '#1E6FD9', shadowOpacity: 0.3, shadowRadius: 10, elevation: 4 },
   ctaText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
   ctaSub: { color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 4 },
-  footer: { textAlign: 'center', fontSize: 12, color: '#8E8E93', lineHeight: 18 },
+  restoreButton: { alignItems: 'center', paddingVertical: 12, marginBottom: 8 },
+  restoreText: { color: '#8E8E93', fontSize: 14, textDecorationLine: 'underline' },
+  footer: { textAlign: 'center', fontSize: 11, color: '#8E8E93', lineHeight: 16, marginTop: 8 },
 });
