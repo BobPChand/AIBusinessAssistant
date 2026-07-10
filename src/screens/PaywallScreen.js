@@ -9,7 +9,6 @@ import {
   getOfferings,
   purchasePackage,
   restorePurchases,
-  ENTITLEMENT_PRO,
 } from '../services/RevenueCatService';
 
 const FEATURES = [
@@ -38,9 +37,9 @@ export default function PaywallScreen({ navigation }) {
       const current = await getOfferings();
       if (current) {
         setOffering(current);
-        // Default select monthly package
+        // Default: select monthly
         const monthly = current.availablePackages.find(
-          p => p.packageType === 'MONTHLY'
+          p => p.identifier === '$rc_monthly' || p.identifier === 'monthly'
         ) || current.availablePackages[0];
         setSelectedPkg(monthly);
       }
@@ -57,9 +56,13 @@ export default function PaywallScreen({ navigation }) {
     try {
       const result = await purchasePackage(selectedPkg);
       if (result.success && result.isActive) {
+        const isLifetime = selectedPkg.packageType === 'LIFETIME' ||
+          selectedPkg.identifier === 'lifetime';
         Alert.alert(
-          'Welcome to Pro!',
-          'Your subscription is now active. Enjoy all features!',
+          isLifetime ? 'Welcome — Forever!' : 'Welcome to Pro!',
+          isLifetime
+            ? 'You now have lifetime access. Thank you!'
+            : 'Your subscription is now active. Enjoy all features!',
           [{ text: 'Get Started', onPress: () => navigation.replace('Dashboard') }]
         );
       }
@@ -76,12 +79,12 @@ export default function PaywallScreen({ navigation }) {
       const result = await restorePurchases();
       if (result.isActive) {
         Alert.alert(
-          'Subscription Restored',
-          'Your Pro subscription has been restored.',
+          'Purchase Restored',
+          'Your Pro access has been restored.',
           [{ text: 'Continue', onPress: () => navigation.replace('Dashboard') }]
         );
       } else {
-        Alert.alert('No Active Subscription', 'We could not find an active subscription for this account.');
+        Alert.alert('Nothing to Restore', 'We could not find an active purchase for this Apple ID.');
       }
     } catch (e) {
       Alert.alert('Restore Failed', e.message || 'Could not restore purchases.');
@@ -90,17 +93,24 @@ export default function PaywallScreen({ navigation }) {
     }
   };
 
-  const formatPrice = (pkg) => {
-    return pkg?.product?.priceString || '';
+  const formatPrice = (pkg) => pkg?.product?.priceString || '';
+
+  const isSelected = (pkg) => selectedPkg?.identifier === pkg?.identifier;
+
+  const getPackageType = (pkg) => {
+    if (!pkg) return null;
+    const id = (pkg.identifier || '').toLowerCase();
+    if (id.includes('lifetime') || pkg.packageType === 'LIFETIME') return 'lifetime';
+    if (id.includes('annual') || pkg.packageType === 'ANNUAL') return 'yearly';
+    return 'monthly';
   };
 
-  const getPeriod = (pkg) => {
-    if (!pkg) return '';
-    switch (pkg.packageType) {
-      case 'MONTHLY': return '/month';
-      case 'ANNUAL': return '/year';
-      default: return '';
-    }
+  const getCTASubtext = () => {
+    if (!selectedPkg) return '';
+    const type = getPackageType(selectedPkg);
+    if (type === 'lifetime') return 'One-time purchase. Never pay again.';
+    if (type === 'yearly') return `Then ${formatPrice(selectedPkg)}/year · Cancel anytime`;
+    return `Then ${formatPrice(selectedPkg)}/month · Cancel anytime`;
   };
 
   if (loading) {
@@ -115,8 +125,12 @@ export default function PaywallScreen({ navigation }) {
   }
 
   const packages = offering?.availablePackages || [];
-  const monthlyPkg = packages.find(p => p.packageType === 'MONTHLY');
-  const annualPkg = packages.find(p => p.packageType === 'ANNUAL');
+
+  // Sort: monthly → yearly → lifetime
+  const sortOrder = { monthly: 0, yearly: 1, lifetime: 2 };
+  const sortedPackages = [...packages].sort((a, b) => {
+    return (sortOrder[getPackageType(a)] ?? 3) - (sortOrder[getPackageType(b)] ?? 3);
+  });
 
   return (
     <SafeAreaView style={styles.container}>
@@ -127,7 +141,7 @@ export default function PaywallScreen({ navigation }) {
           <View style={styles.iconBadge}>
             <Ionicons name="sparkles" size={32} color="#fff" />
           </View>
-          <Text style={styles.title}>AI Business Assistant</Text>
+          <Text style={styles.title}>AI Invoice Generator</Text>
           <Text style={styles.subtitle}>Pro</Text>
           <Text style={styles.trial}>Start your 7-day FREE trial</Text>
         </View>
@@ -145,43 +159,46 @@ export default function PaywallScreen({ navigation }) {
           ))}
         </View>
 
-        {/* Plan selector */}
-        <View style={styles.plansRow}>
-          {monthlyPkg && (
-            <TouchableOpacity
-              style={[styles.planCard, selectedPkg?.identifier === monthlyPkg.identifier && styles.planCardSelected]}
-              onPress={() => setSelectedPkg(monthlyPkg)}
-            >
-              <Text style={[styles.planLabel, selectedPkg?.identifier === monthlyPkg.identifier && styles.planLabelSelected]}>
-                Monthly
-              </Text>
-              <Text style={[styles.planPrice, selectedPkg?.identifier === monthlyPkg.identifier && styles.planPriceSelected]}>
-                {formatPrice(monthlyPkg)}
-              </Text>
-              <Text style={[styles.planPeriod, selectedPkg?.identifier === monthlyPkg.identifier && styles.planPeriodSelected]}>
-                /month
-              </Text>
-            </TouchableOpacity>
-          )}
-          {annualPkg && (
-            <TouchableOpacity
-              style={[styles.planCard, selectedPkg?.identifier === annualPkg.identifier && styles.planCardSelected]}
-              onPress={() => setSelectedPkg(annualPkg)}
-            >
-              <View style={styles.planBadge}>
-                <Text style={styles.planBadgeText}>Save 33%</Text>
-              </View>
-              <Text style={[styles.planLabel, selectedPkg?.identifier === annualPkg.identifier && styles.planLabelSelected]}>
-                Yearly
-              </Text>
-              <Text style={[styles.planPrice, selectedPkg?.identifier === annualPkg.identifier && styles.planPriceSelected]}>
-                {formatPrice(annualPkg)}
-              </Text>
-              <Text style={[styles.planPeriod, selectedPkg?.identifier === annualPkg.identifier && styles.planPeriodSelected]}>
-                /year
-              </Text>
-            </TouchableOpacity>
-          )}
+        {/* Plan Selector */}
+        <View style={styles.plansColumn}>
+          {sortedPackages.map((pkg) => {
+            const type = getPackageType(pkg);
+            const selected = isSelected(pkg);
+            return (
+              <TouchableOpacity
+                key={pkg.identifier}
+                style={[styles.planCard, selected && styles.planCardSelected]}
+                onPress={() => setSelectedPkg(pkg)}
+              >
+                <View style={styles.planLeft}>
+                  <Text style={[styles.planLabel, selected && styles.planLabelSelected]}>
+                    {type === 'lifetime' ? 'Lifetime' : type === 'yearly' ? 'Yearly' : 'Monthly'}
+                  </Text>
+                  {type === 'yearly' && (
+                    <View style={styles.planBadge}>
+                      <Text style={styles.planBadgeText}>Save 33%</Text>
+                    </View>
+                  )}
+                  {type === 'lifetime' && (
+                    <View style={[styles.planBadge, { backgroundColor: '#FF9500' }]}>
+                      <Text style={styles.planBadgeText}>Best Value</Text>
+                    </View>
+                  )}
+                </View>
+                <View style={styles.planRight}>
+                  <Text style={[styles.planPrice, selected && styles.planPriceSelected]}>
+                    {formatPrice(pkg)}
+                  </Text>
+                  <Text style={[styles.planPeriod, selected && styles.planPeriodSelected]}>
+                    {type === 'lifetime' ? 'one-time' : type === 'yearly' ? '/year' : '/month'}
+                  </Text>
+                </View>
+                {selected && (
+                  <Ionicons name="checkmark-circle" size={20} color="#1E6FD9" style={styles.planCheck} />
+                )}
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         {/* CTA */}
@@ -194,10 +211,10 @@ export default function PaywallScreen({ navigation }) {
             <ActivityIndicator color="#fff" />
           ) : (
             <>
-              <Text style={styles.ctaText}>Start Free Trial</Text>
-              <Text style={styles.ctaSub}>
-                Then {formatPrice(selectedPkg)}{getPeriod(selectedPkg)} · Cancel anytime
+              <Text style={styles.ctaText}>
+                {getPackageType(selectedPkg) === 'lifetime' ? 'Get Lifetime Access' : 'Start Free Trial'}
               </Text>
+              <Text style={styles.ctaSub}>{getCTASubtext()}</Text>
             </>
           )}
         </TouchableOpacity>
@@ -206,13 +223,12 @@ export default function PaywallScreen({ navigation }) {
         <TouchableOpacity style={styles.restoreButton} onPress={handleRestore} disabled={restoring}>
           {restoring
             ? <ActivityIndicator size="small" color="#8E8E93" />
-            : <Text style={styles.restoreText}>Restore Purchases</Text>
-          }
+            : <Text style={styles.restoreText}>Restore Purchases</Text>}
         </TouchableOpacity>
 
         {/* Footer */}
         <Text style={styles.footer}>
-          Payment will be charged to your Apple ID account. Subscription automatically renews unless cancelled at least 24 hours before the end of the current period. Cancel anytime in your App Store settings.
+          Payment will be charged to your Apple ID account. Subscriptions automatically renew unless cancelled at least 24 hours before the end of the current period. Manage subscriptions in App Store settings.
         </Text>
 
       </ScrollView>
@@ -234,16 +250,19 @@ const styles = StyleSheet.create({
   featureRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 12 },
   featureIcon: { width: 34, height: 34, borderRadius: 10, backgroundColor: '#EBF2FF', justifyContent: 'center', alignItems: 'center' },
   featureText: { flex: 1, fontSize: 15, color: '#1C1C1E' },
-  plansRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
-  planCard: { flex: 1, backgroundColor: '#fff', borderRadius: 16, padding: 16, alignItems: 'center', borderWidth: 2, borderColor: 'transparent', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },
+  plansColumn: { gap: 10, marginBottom: 20 },
+  planCard: { backgroundColor: '#fff', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', borderWidth: 2, borderColor: 'transparent', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },
   planCardSelected: { borderColor: '#1E6FD9', backgroundColor: '#EBF2FF' },
-  planBadge: { backgroundColor: '#34C759', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, marginBottom: 6 },
+  planLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  planRight: { alignItems: 'flex-end', marginRight: 8 },
+  planCheck: { marginLeft: 4 },
+  planBadge: { backgroundColor: '#34C759', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
   planBadgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
-  planLabel: { fontSize: 13, color: '#8E8E93', fontWeight: '600' },
+  planLabel: { fontSize: 15, color: '#1C1C1E', fontWeight: '600' },
   planLabelSelected: { color: '#1E6FD9' },
-  planPrice: { fontSize: 22, fontWeight: 'bold', color: '#1C1C1E', marginTop: 4 },
+  planPrice: { fontSize: 18, fontWeight: 'bold', color: '#1C1C1E' },
   planPriceSelected: { color: '#1E6FD9' },
-  planPeriod: { fontSize: 12, color: '#8E8E93' },
+  planPeriod: { fontSize: 11, color: '#8E8E93' },
   planPeriodSelected: { color: '#1E6FD9' },
   ctaButton: { backgroundColor: '#1E6FD9', borderRadius: 16, padding: 18, alignItems: 'center', marginBottom: 12, shadowColor: '#1E6FD9', shadowOpacity: 0.3, shadowRadius: 10, elevation: 4 },
   ctaText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
