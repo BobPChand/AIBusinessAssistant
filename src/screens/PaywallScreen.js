@@ -12,11 +12,11 @@ import {
 } from '../services/RevenueCatService';
 
 const FEATURES = [
-  { icon: 'chatbubble-ellipses', text: 'Unlimited GPT-4o AI Chat' },
-  { icon: 'checkmark-done-circle', text: 'Smart Task Management' },
-  { icon: 'trending-up', text: 'Business Insights & Analytics' },
-  { icon: 'mic', text: 'Voice Input Support' },
-  { icon: 'notifications', text: 'Daily AI Morning Briefings' },
+  { icon: 'document-text', text: 'Unlimited AI Invoices & Quotes' },
+  { icon: 'calculator', text: 'Auto GST/HST/PST/QST by Province' },
+  { icon: 'document-attach', text: 'Professional PDF Export' },
+  { icon: 'people', text: 'Client Contact Management' },
+  { icon: 'time', text: 'Payment Status Tracking' },
   { icon: 'shield-checkmark', text: 'Bank-level Data Encryption' },
 ];
 
@@ -63,7 +63,7 @@ export default function PaywallScreen({ navigation }) {
           isLifetime
             ? 'You now have lifetime access. Thank you!'
             : 'Your subscription is now active. Enjoy all features!',
-          [{ text: 'Get Started', onPress: () => navigation.replace('Dashboard') }]
+          [{ text: 'Get Started', onPress: () => navigation.replace('Home') }]
         );
       }
     } catch (e) {
@@ -81,7 +81,7 @@ export default function PaywallScreen({ navigation }) {
         Alert.alert(
           'Purchase Restored',
           'Your Pro access has been restored.',
-          [{ text: 'Continue', onPress: () => navigation.replace('Dashboard') }]
+          [{ text: 'Continue', onPress: () => navigation.replace('Home') }]
         );
       } else {
         Alert.alert('Nothing to Restore', 'We could not find an active purchase for this Apple ID.');
