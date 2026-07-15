@@ -1,5 +1,9 @@
 # AIBusinessAssistant
 
+## Repository Purpose
+This repository is maintained as a standalone app codebase, separate from AI Resume Builder Pro,
+AI Invoice Generator, and AI Business Assistant Original repositories.
+
 AI-powered business assistant app built with React Native / Expo.
 - GPT-4o powered AI Chat
 - Task Management
