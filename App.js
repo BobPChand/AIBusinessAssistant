@@ -10,7 +10,7 @@ import DashboardScreen from './src/screens/DashboardScreen';
 import ChatScreen from './src/screens/ChatScreen';
 import TasksScreen from './src/screens/TasksScreen';
 import InsightsScreen from './src/screens/InsightsScreen';
-import SettingsScreen from './src/screens/SettingsScreen';
+import PaywallScreen from './src/screens/PaywallScreen';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -44,7 +44,7 @@ export default function App() {
               else if (route.name === 'Chat') iconName = focused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline';
               else if (route.name === 'Tasks') iconName = focused ? 'checkmark-circle' : 'checkmark-circle-outline';
               else if (route.name === 'Insights') iconName = focused ? 'bar-chart' : 'bar-chart-outline';
-              else if (route.name === 'Settings') iconName = focused ? 'settings' : 'settings-outline';
+              else if (route.name === 'Upgrade') iconName = focused ? 'rocket' : 'rocket-outline';
               return <Ionicons name={iconName} size={size} color={color} />;
             },
             tabBarActiveTintColor: '#4A90E2',
@@ -59,7 +59,7 @@ export default function App() {
           <Tab.Screen name="Chat" component={ChatScreen} />
           <Tab.Screen name="Tasks" component={TasksScreen} />
           <Tab.Screen name="Insights" component={InsightsScreen} />
-          <Tab.Screen name="Settings" component={SettingsScreen} />
+          <Tab.Screen name="Upgrade" component={PaywallScreen} />
         </Tab.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>

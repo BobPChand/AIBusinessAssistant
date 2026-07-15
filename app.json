@@ -16,7 +16,9 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "ai.aibusinessassistant.app",
+      "buildNumber": "3",
       "infoPlist": {
+        "CFBundleDisplayName": "AI Invoice Generator",
         "NSMicrophoneUsageDescription": "AI Invoice Generator uses your microphone for voice input to create invoices hands-free.",
         "NSSpeechRecognitionUsageDescription": "AI Invoice Generator uses speech recognition to convert your voice to invoice details.",
         "ITSAppUsesNonExemptEncryption": false
@@ -28,6 +30,7 @@
         "backgroundColor": "#0A1628"
       },
       "package": "ai.aibusinessassistant.app",
+      "versionCode": 3,
       "permissions": ["RECORD_AUDIO", "RECEIVE_BOOT_COMPLETED", "VIBRATE"]
     },
     "web": {
