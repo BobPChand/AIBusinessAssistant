@@ -41,18 +41,12 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/notification-icon.png",
-          "color": "#0A1628"
-        }
-      ]
+      "react-native-purchases"
     ],
     "extra": {
       "apiEndpoint": "https://superagent-02ccfade.base44.app/functions/aiInvoice",
       "eas": {
-        "projectId": "a8a6b52f-84ad-4585-88e6-8dd0bf5d49dd"
+        "projectId": ""
       }
     },
     "owner": "bc-canadian-usa-global-ventures-llc"
